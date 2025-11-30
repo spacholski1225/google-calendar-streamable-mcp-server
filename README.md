@@ -51,12 +51,29 @@ Prerequisites: [Bun](https://bun.sh/), [Node.js 20+](https://nodejs.org), [Googl
 
 ### 1. Local + OAuth — Quick Start
 
-1. Create OAuth credentials in [Google Cloud Console](https://console.cloud.google.com):
-   - Create a project and enable **Google Calendar API**
+1. Set up Google Cloud Console:
+
+   **Create Project & Enable API:**
+   - Go to [Google Cloud Console](https://console.cloud.google.com)
+   - Create a new project (or select existing)
+   - Navigate to **APIs & Services > Library**
+   - Search for "Google Calendar API" and click **Enable**
+
+   **Configure OAuth Consent Screen** (required before credentials):
+   - Go to **APIs & Services > OAuth consent screen**
+   - Select **External** (or Internal for Workspace)
+   - Fill in app name, user support email, developer email
+   - Add scopes: `../auth/calendar.events`, `../auth/calendar.readonly`
+   - Add your email as a **Test user** (required while app is in "Testing" mode)
+   - Save
+
+   **Create Credentials:**
    - Go to **APIs & Services > Credentials**
-   - Create **OAuth 2.0 Client ID** (Web application)
-   - Add Authorized redirect URI: `http://127.0.0.1:3001/oauth/callback`
-   - Copy **Client ID** and **Client Secret**
+   - Click **Create Credentials > OAuth client ID**
+   - Application type: **Web application**
+   - Name: anything (e.g., "Google Calendar MCP")
+   - Authorized redirect URIs: `http://127.0.0.1:3001/oauth/callback`
+   - Click **Create** and copy **Client ID** and **Client Secret**
 
 2. Configure environment:
 
@@ -197,20 +214,25 @@ Endpoint: `https://<worker-name>.<account>.workers.dev/mcp`
 
 ## Client Configuration
 
-**MCP Inspector (quick test):**
+### Pre-authenticate (Recommended)
+
+Claude Desktop has short timeouts that can kill the OAuth flow mid-process. **Pre-authenticate manually first:**
 
 ```bash
-bunx @modelcontextprotocol/inspector
-# Connect to: http://localhost:3000/mcp
+
+# Authenticate (complete Google sign-in when browser opens)
+npx mcp-remote https://your-worker.workers.dev/mcp --transport http-only
 ```
 
-**Claude Desktop / Cursor:**
+Once you see "Authentication successful!", tokens are cached and Claude Desktop will use them.
+
+### Claude Desktop / Cursor (Local Server)
 
 ```json
 {
   "mcpServers": {
     "google-calendar": {
-      "command": "bunx",
+      "command": "npx",
       "args": ["mcp-remote", "http://127.0.0.1:3000/mcp", "--transport", "http-only"],
       "env": { "NO_PROXY": "127.0.0.1,localhost" }
     }
@@ -218,7 +240,45 @@ bunx @modelcontextprotocol/inspector
 }
 ```
 
-For Cloudflare, replace URL with `https://<worker-name>.<account>.workers.dev/mcp`.
+### Claude Desktop / Cursor (Cloudflare Worker)
+
+```json
+{
+  "mcpServers": {
+    "google-calendar": {
+      "command": "npx",
+      "args": ["mcp-remote", "https://your-worker.workers.dev/mcp", "--transport", "http-only"]
+    }
+  }
+}
+```
+
+### Node Version Issues (nvm users)
+
+If you get `ReadableStream is not defined` or similar errors, Claude Desktop may be using an old Node version. Fix by specifying the full path:
+
+```json
+{
+  "mcpServers": {
+    "google-calendar": {
+      "command": "/Users/YOUR_USER/.nvm/versions/node/v22.0.0/bin/npx",
+      "args": ["mcp-remote", "https://your-worker.workers.dev/mcp", "--transport", "http-only"],
+      "env": {
+        "PATH": "/Users/YOUR_USER/.nvm/versions/node/v22.0.0/bin:/usr/local/bin:/usr/bin:/bin"
+      }
+    }
+  }
+}
+```
+
+Find your node path with: `which node`
+
+### MCP Inspector (Quick Test)
+
+```bash
+bunx @modelcontextprotocol/inspector
+# Connect to: http://localhost:3000/mcp (local) or https://your-worker.workers.dev/mcp (remote)
+```
 
 ---
 
@@ -467,13 +527,33 @@ src/
 
 | Issue | Solution |
 |-------|----------|
-| "Authentication required" | Complete OAuth flow. Delete `.tokens.json` and re-authenticate if corrupted. |
+| "Authentication required" | Complete OAuth flow. Run `rm -rf ~/.mcp-auth` and re-authenticate. |
 | "redirect_uri_mismatch" | Google treats `localhost` and `127.0.0.1` as different. Use `127.0.0.1` consistently in both .env and Google Cloud Console. |
-| "unknown_txn" error | Server restarted during OAuth flow. Re-authenticate. |
+| "unknown_txn" error | Stale mcp-remote processes. Run `pkill -9 -f mcp-remote && rm -rf ~/.mcp-auth` then retry. |
+| "ReadableStream is not defined" | Node.js version too old (needs 18+). Use full path to newer node in config. |
+| "spawn bunx ENOENT" | Claude Desktop can't find `bunx`. Use `npx` instead, or specify full path. |
+| "Another instance handling auth" | Kill zombie processes: `pkill -9 -f mcp-remote && rm -rf ~/.mcp-auth` |
+| OAuth timeout in Claude | Claude kills auth flow too quickly. Pre-authenticate manually (see Client Configuration). |
 | Token expired | Google tokens expire after 1 hour. Refresh tokens are used automatically if `access_type=offline` was set. |
 | OAuth doesn't start (Worker) | `curl -i -X POST https://<worker>/mcp` should return `401` with `WWW-Authenticate`. |
 | KV namespace error | Run `wrangler kv:namespace create TOKENS` and update `wrangler.toml` with the ID. |
 | Tools empty in Claude | Ensure Worker returns JSON Schema for `tools/list`; use `mcp-remote`. |
+
+### Debugging
+
+Enable detailed logs with `--debug`:
+
+```bash
+npx mcp-remote https://your-worker.workers.dev/mcp --transport http-only --debug
+```
+
+Logs are written to `~/.mcp-auth/{hash}_debug.log`.
+
+Test auth flow independently:
+
+```bash
+npx -p mcp-remote@latest mcp-remote-client https://your-worker.workers.dev/mcp --transport http-only --debug
+```
 
 ---
 
