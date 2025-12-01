@@ -3,6 +3,7 @@
  * Uses the shared dispatcher for JSON-RPC processing.
  */
 
+import { serverMetadata } from '../../config/metadata.js';
 import type { UnifiedConfig } from '../../shared/config/env.js';
 import { withCors } from '../../shared/http/cors.js';
 import { jsonResponse } from '../../shared/http/response.js';
@@ -250,14 +251,14 @@ export async function handleMcpRequest(
   // Get cancellation registry for this session
   const cancellationRegistry = getCancellationRegistry(sessionId);
 
-  // Build dispatch context
+  // Build dispatch context (use serverMetadata as fallback for custom instructions)
   const dispatchContext: McpDispatchContext = {
     sessionId,
     auth: authContext,
     config: {
-      title: config.MCP_TITLE,
+      title: config.MCP_TITLE || serverMetadata.title,
       version: config.MCP_VERSION,
-      instructions: config.MCP_INSTRUCTIONS,
+      instructions: serverMetadata.instructions,
     },
     getSessionState: () => sessionStateMap.get(sessionId),
     setSessionState: (state) => sessionStateMap.set(sessionId, state),

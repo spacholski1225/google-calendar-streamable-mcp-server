@@ -3,6 +3,12 @@
 
 import { createHash, randomBytes } from 'node:crypto';
 import type { ProviderTokens, TokenStore } from '../storage/interface.js';
+import {
+  base64Encode,
+  base64UrlEncode,
+  base64UrlEncodeJson,
+  base64UrlDecodeJson,
+} from '../utils/base64.js';
 import { sharedLogger as logger } from '../utils/logger.js';
 import type {
   AuthorizeInput,
@@ -15,78 +21,24 @@ import type {
   TokenResult,
 } from './types.js';
 
-// Base64 encoding (works in both Node.js and Workers)
-function base64Encode(input: string): string {
-  if (typeof Buffer !== 'undefined') {
-    return Buffer.from(input, 'utf8').toString('base64');
-  }
-  return btoa(input);
-}
-
-// Base64 URL encoding
-function b64url(input: Buffer | Uint8Array): string {
-  let base64: string;
-  if (typeof Buffer !== 'undefined' && input instanceof Buffer) {
-    base64 = input.toString('base64');
-  } else {
-    const bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
-    let binary = '';
-    for (let i = 0; i < bytes.length; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    base64 = btoa(binary);
-  }
-  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-}
-
-function b64urlEncodeJson(obj: unknown): string {
-  try {
-    const json = JSON.stringify(obj);
-    if (typeof Buffer !== 'undefined') {
-      return b64url(Buffer.from(json, 'utf8'));
-    }
-    const encoder = new TextEncoder();
-    return b64url(encoder.encode(json));
-  } catch {
-    return '';
-  }
-}
-
-function b64urlDecodeJson<T = unknown>(value: string): T | null {
-  try {
-    const padded = value.replace(/-/g, '+').replace(/_/g, '/');
-    let json: string;
-    if (typeof Buffer !== 'undefined') {
-      const buf = Buffer.from(padded, 'base64');
-      json = buf.toString('utf8');
-    } else {
-      json = atob(padded);
-    }
-    return JSON.parse(json) as T;
-  } catch {
-    return null;
-  }
-}
-
-// Async version for Workers/Node
+// Async SHA-256 for Workers/Node
 async function sha256B64UrlAsync(input: string): Promise<string> {
   if (typeof Buffer !== 'undefined') {
     const hash = createHash('sha256').update(input).digest();
-    return b64url(hash);
+    return base64UrlEncode(hash);
   }
-  const encoder = new TextEncoder();
-  const data = encoder.encode(input);
+  const data = new TextEncoder().encode(input);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  return b64url(new Uint8Array(hashBuffer));
+  return base64UrlEncode(new Uint8Array(hashBuffer));
 }
 
 export function generateOpaqueToken(bytes = 32): string {
   if (typeof Buffer !== 'undefined') {
-    return b64url(randomBytes(bytes));
+    return base64UrlEncode(randomBytes(bytes));
   }
   const array = new Uint8Array(bytes);
   crypto.getRandomValues(array);
-  return b64url(array);
+  return base64UrlEncode(array);
 }
 
 function isAllowedRedirect(uri: string, config: OAuthConfig, isDev: boolean): boolean {
@@ -173,7 +125,7 @@ export async function handleAuthorize(
     }
 
     const compositeState =
-      b64urlEncodeJson({
+      base64UrlEncodeJson({
         tid: txnId,
         cs: input.state,
         cr: input.redirectUri,
@@ -182,9 +134,18 @@ export async function handleAuthorize(
 
     authUrl.searchParams.set('state', compositeState);
 
+    // Apply extra auth params (e.g., access_type=offline&prompt=consent for Google)
+    if (providerConfig.extraAuthParams) {
+      const extraParams = new URLSearchParams(providerConfig.extraAuthParams);
+      for (const [key, value] of extraParams) {
+        authUrl.searchParams.set(key, value);
+      }
+    }
+
     logger.debug('oauth_authorize', {
       message: 'Redirect URL constructed',
       url: authUrl.origin + authUrl.pathname,
+      hasExtraParams: !!providerConfig.extraAuthParams,
     });
 
     return {
@@ -233,7 +194,7 @@ export async function handleProviderCallback(
   },
 ): Promise<CallbackResult> {
   const decoded =
-    b64urlDecodeJson<{
+    base64UrlDecodeJson<{
       tid?: string;
       cs?: string;
       cr?: string;
@@ -431,7 +392,7 @@ async function refreshProviderToken(
 
   return {
     access_token: accessToken,
-    refresh_token: data.refresh_token ?? providerRefreshToken, // Some providers don't rotate
+    refresh_token: data.refresh_token ?? providerRefreshToken,
     expires_at: Date.now() + Number(data.expires_in ?? 3600) * 1000,
     scopes: String(data.scope || '').split(/\s+/).filter(Boolean),
   };

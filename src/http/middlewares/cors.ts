@@ -1,27 +1,26 @@
-// CORS middleware for Hono
-// From Spotify MCP
+// CORS middleware for Hono - uses built-in cors() helper
 
-import type { HttpBindings } from '@hono/node-server';
-import type { MiddlewareHandler } from 'hono';
+import { cors } from 'hono/cors';
 
-export function corsMiddleware(): MiddlewareHandler<{
-  Bindings: HttpBindings;
-}> {
-  return async (c, next) => {
-    const requestOrigin = c.req.header('Origin') || c.req.header('origin');
-    const allowOrigin = requestOrigin || 'http://localhost';
-    c.header('Access-Control-Allow-Origin', allowOrigin);
-    c.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-    c.header(
-      'Access-Control-Allow-Headers',
-      'Content-Type, Authorization, Mcp-Session-Id, MCP-Protocol-Version, Mcp-Protocol-Version, X-Api-Key, X-Auth-Token',
-    );
-    c.header('Access-Control-Expose-Headers', 'Mcp-Session-Id, WWW-Authenticate');
-
-    if (c.req.method === 'OPTIONS') {
-      return c.text('', 200);
-    }
-
-    await next();
-  };
-}
+/**
+ * CORS middleware configured for MCP endpoints.
+ * Uses Hono's built-in cors() middleware.
+ * 
+ * Note: Preflight returns 204 (Hono default) vs original 200.
+ * Both are valid per CORS spec - browsers accept either.
+ */
+export const corsMiddleware = () =>
+  cors({
+    origin: (origin) => origin || 'http://localhost',
+    allowMethods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+    allowHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Mcp-Session-Id',
+      'MCP-Protocol-Version',
+      'Mcp-Protocol-Version',
+      'X-Api-Key',
+      'X-Auth-Token',
+    ],
+    exposeHeaders: ['Mcp-Session-Id', 'WWW-Authenticate'],
+  });

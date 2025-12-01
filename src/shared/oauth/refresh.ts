@@ -6,6 +6,7 @@
  */
 
 import type { ProviderTokens, TokenStore } from '../storage/interface.js';
+import { base64Encode } from '../utils/base64.js';
 import { sharedLogger as logger } from '../utils/logger.js';
 
 /** Provider configuration for token refresh */
@@ -21,16 +22,6 @@ export interface RefreshResult {
   success: boolean;
   tokens?: ProviderTokens;
   error?: string;
-}
-
-/**
- * Base64 encode a string (works in both Node.js and Workers).
- */
-function base64Encode(input: string): string {
-  if (typeof Buffer !== 'undefined') {
-    return Buffer.from(input, 'utf8').toString('base64');
-  }
-  return btoa(input);
 }
 
 /**
@@ -106,7 +97,7 @@ export async function refreshProviderToken(
       success: true,
       tokens: {
         access_token: accessToken,
-        refresh_token: data.refresh_token ?? refreshToken, // Some providers don't rotate
+        refresh_token: data.refresh_token ?? refreshToken,
         expires_at: Date.now() + Number(data.expires_in ?? 3600) * 1000,
         scopes: String(data.scope || '').split(/\s+/).filter(Boolean),
       },
@@ -137,7 +128,7 @@ export function isTokenExpiredOrExpiring(
   expiresAt: number | undefined,
   bufferMs = EXPIRY_BUFFER_MS,
 ): boolean {
-  if (!expiresAt) return false; // No expiry = assume valid
+  if (!expiresAt) return false;
   return Date.now() >= expiresAt - bufferMs;
 }
 
@@ -163,7 +154,6 @@ export async function ensureFreshToken(
     return { accessToken: '', wasRefreshed: false };
   }
 
-  // Check if token is near expiry
   if (!isTokenExpiredOrExpiring(record.provider.expires_at)) {
     return { accessToken: record.provider.access_token, wasRefreshed: false };
   }
@@ -174,7 +164,6 @@ export async function ensureFreshToken(
     now: Date.now(),
   });
 
-  // Need refresh - check we have what we need
   if (!record.provider.refresh_token) {
     logger.warning('oauth_refresh', {
       message: 'Token near expiry but no refresh token available',
@@ -189,7 +178,6 @@ export async function ensureFreshToken(
     return { accessToken: record.provider.access_token, wasRefreshed: false };
   }
 
-  // Attempt refresh
   const result = await refreshProviderToken(record.provider.refresh_token, providerConfig);
 
   if (!result.success || !result.tokens) {
@@ -200,7 +188,6 @@ export async function ensureFreshToken(
     return { accessToken: record.provider.access_token, wasRefreshed: false };
   }
 
-  // Update token store with new tokens
   try {
     await tokenStore.updateByRsRefresh(
       record.rs_refresh_token,
@@ -218,10 +205,6 @@ export async function ensureFreshToken(
       message: 'Failed to update token store',
       error: (error as Error).message,
     });
-    // Return new token even if store update failed
     return { accessToken: result.tokens.access_token, wasRefreshed: true };
   }
 }
-
-
-

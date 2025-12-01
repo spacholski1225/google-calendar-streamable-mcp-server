@@ -77,6 +77,8 @@ export type ProviderConfig = {
   authorizationUrl?: string;
   tokenUrl?: string;
   oauthScopes: string;
+  /** Extra query params for authorization URL (e.g., "access_type=offline&prompt=consent") */
+  extraAuthParams?: string;
 };
 
 export type OAuthConfig = {

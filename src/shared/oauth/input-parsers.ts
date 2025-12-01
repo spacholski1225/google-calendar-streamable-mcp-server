@@ -80,6 +80,7 @@ export function buildProviderConfig(config: UnifiedConfig): ProviderConfig {
     authorizationUrl: config.OAUTH_AUTHORIZATION_URL,
     tokenUrl: config.OAUTH_TOKEN_URL,
     oauthScopes: config.OAUTH_SCOPES,
+    extraAuthParams: config.OAUTH_EXTRA_AUTH_PARAMS,
   };
 }
 

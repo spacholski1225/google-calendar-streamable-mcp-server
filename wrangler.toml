@@ -32,7 +32,7 @@ OAUTH_EXTRA_AUTH_PARAMS = "access_type=offline&prompt=consent"
 # Update these to match your Workers deployment URL
 OAUTH_REDIRECT_ALLOW_ALL = "true"
 OAUTH_REDIRECT_ALLOWLIST = "alice://oauth/callback,https://claude.ai/api/mcp/auth_callback,https://claude.com/api/mcp/auth_callback,http://localhost:*/oauth/callback,http://127.0.0.1:*/oauth/callback"
-OAUTH_REDIRECT_URI = "https://google-calendar.adam-996.workers.dev/oauth/callback"
+OAUTH_REDIRECT_URI = "alice://oauth/callback"
 
 # Environment
 NODE_ENV = "production"
