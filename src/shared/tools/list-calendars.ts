@@ -25,7 +25,12 @@ export const listCalendarsTool = defineTool({
     if (!token) {
       return {
         isError: true,
-        content: [{ type: 'text', text: 'Authentication required. Please authenticate with Google Calendar.' }],
+        content: [
+          {
+            type: 'text',
+            text: 'Authentication required. Please authenticate with Google Calendar.',
+          },
+        ],
       };
     }
 
@@ -57,11 +62,14 @@ export const listCalendarsTool = defineTool({
     } catch (error) {
       return {
         isError: true,
-        content: [{ type: 'text', text: `Failed to list calendars: ${(error as Error).message}` }],
+        content: [
+          {
+            type: 'text',
+            text: `Failed to list calendars: ${(error as Error).message}`,
+          },
+        ],
       };
     }
   },
 });
-
-
 

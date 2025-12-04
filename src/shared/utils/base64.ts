@@ -1,6 +1,6 @@
 /**
  * Unified base64/base64url utilities for Node.js and Cloudflare Workers.
- * 
+ *
  * Uses native APIs where available:
  * - Node.js 18+: Buffer.toString('base64url')
  * - Workers/Browser: Web APIs (btoa/atob)
@@ -49,10 +49,7 @@ export function base64UrlEncode(bytes: Uint8Array | Buffer): string {
   for (let i = 0; i < bytes.length; i++) {
     binary += String.fromCharCode(bytes[i]);
   }
-  return btoa(binary)
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/g, '');
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
 
 /**
@@ -121,4 +118,3 @@ export function base64UrlDecodeJson<T = unknown>(value: string): T | null {
     return null;
   }
 }
-

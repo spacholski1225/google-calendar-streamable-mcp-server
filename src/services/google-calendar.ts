@@ -74,7 +74,13 @@ export interface CalendarEvent {
   attendees?: EventAttendee[];
   organizer?: { email: string; displayName?: string; self?: boolean };
   creator?: { email: string; displayName?: string };
-  eventType?: 'default' | 'birthday' | 'focusTime' | 'fromGmail' | 'outOfOffice' | 'workingLocation';
+  eventType?:
+    | 'default'
+    | 'birthday'
+    | 'focusTime'
+    | 'fromGmail'
+    | 'outOfOffice'
+    | 'workingLocation';
   visibility?: 'default' | 'public' | 'private' | 'confidential';
   colorId?: string;
   recurringEventId?: string;
@@ -90,10 +96,13 @@ export interface CalendarEvent {
 export interface FreeBusyResponse {
   timeMin: string;
   timeMax: string;
-  calendars: Record<string, {
-    busy: Array<{ start: string; end: string }>;
-    errors?: Array<{ domain: string; reason: string }>;
-  }>;
+  calendars: Record<
+    string,
+    {
+      busy: Array<{ start: string; end: string }>;
+      errors?: Array<{ domain: string; reason: string }>;
+    }
+  >;
 }
 
 // ============================================================================
@@ -251,14 +260,17 @@ export class GoogleCalendarClient {
   // Events - List/Search
   // --------------------------------------------------------------------------
 
-  async listEvents(params: ListEventsParams): Promise<{ items: CalendarEvent[]; nextPageToken?: string }> {
+  async listEvents(
+    params: ListEventsParams,
+  ): Promise<{ items: CalendarEvent[]; nextPageToken?: string }> {
     const calendarId = params.calendarId || 'primary';
     const queryParams = new URLSearchParams();
 
     if (params.timeMin) queryParams.set('timeMin', params.timeMin);
     if (params.timeMax) queryParams.set('timeMax', params.timeMax);
     if (params.maxResults) queryParams.set('maxResults', String(params.maxResults));
-    if (params.singleEvents !== undefined) queryParams.set('singleEvents', String(params.singleEvents));
+    if (params.singleEvents !== undefined)
+      queryParams.set('singleEvents', String(params.singleEvents));
     if (params.orderBy) queryParams.set('orderBy', params.orderBy);
     if (params.q) queryParams.set('q', params.q);
     if (params.pageToken) queryParams.set('pageToken', params.pageToken);
@@ -413,35 +425,39 @@ export class GoogleCalendarClient {
 
   async respondToEvent(params: RespondToEventParams): Promise<CalendarEvent> {
     const calendarId = params.calendarId || 'primary';
-    
+
     // First, get the current event to find our attendee entry
     const event = await this.getEvent(calendarId, params.eventId);
-    
+
     if (!event.attendees || event.attendees.length === 0) {
-      throw new Error('This event has no attendees. You can only respond to events you were invited to.');
+      throw new Error(
+        'This event has no attendees. You can only respond to events you were invited to.',
+      );
     }
-    
+
     // Find the self attendee
-    const selfAttendee = event.attendees.find(a => a.self);
+    const selfAttendee = event.attendees.find((a) => a.self);
     if (!selfAttendee) {
-      throw new Error('You are not an attendee of this event. Cannot update response status.');
+      throw new Error(
+        'You are not an attendee of this event. Cannot update response status.',
+      );
     }
-    
+
     // Update the attendee's response status
-    const updatedAttendees = event.attendees.map(a => {
+    const updatedAttendees = event.attendees.map((a) => {
       if (a.self) {
         return { ...a, responseStatus: params.response };
       }
       return a;
     });
-    
+
     // PATCH the event with updated attendees
     const queryParams = new URLSearchParams();
     if (params.sendUpdates) queryParams.set('sendUpdates', params.sendUpdates);
-    
+
     const query = queryParams.toString();
     const path = `/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(params.eventId)}${query ? `?${query}` : ''}`;
-    
+
     return this.request(path, {
       method: 'PATCH',
       body: JSON.stringify({ attendees: updatedAttendees }),

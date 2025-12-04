@@ -5,7 +5,7 @@ import { cors } from 'hono/cors';
 /**
  * CORS middleware configured for MCP endpoints.
  * Uses Hono's built-in cors() middleware.
- * 
+ *
  * Note: Preflight returns 204 (Hono default) vs original 200.
  * Both are valid per CORS spec - browsers accept either.
  */

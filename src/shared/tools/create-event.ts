@@ -4,7 +4,10 @@
 
 import { z } from 'zod';
 import { toolsMetadata } from '../../config/metadata.js';
-import { GoogleCalendarClient, type CalendarEvent } from '../../services/google-calendar.js';
+import {
+  type CalendarEvent,
+  GoogleCalendarClient,
+} from '../../services/google-calendar.js';
 import { defineTool, type ToolResult } from './types.js';
 
 const ReminderOverrideSchema = z.object({
@@ -19,20 +22,41 @@ const RemindersSchema = z.object({
 
 const InputSchema = z.object({
   // Natural language mode
-  text: z.string().optional().describe('Natural language event description (e.g., "Lunch with Anna tomorrow at noon")'),
+  text: z
+    .string()
+    .optional()
+    .describe(
+      'Natural language event description (e.g., "Lunch with Anna tomorrow at noon")',
+    ),
 
   // Structured mode
   summary: z.string().optional().describe('Event title'),
-  start: z.string().optional().describe('Start time (ISO 8601 datetime or YYYY-MM-DD for all-day)'),
-  end: z.string().optional().describe('End time (ISO 8601 datetime or YYYY-MM-DD for all-day)'),
+  start: z
+    .string()
+    .optional()
+    .describe('Start time (ISO 8601 datetime or YYYY-MM-DD for all-day)'),
+  end: z
+    .string()
+    .optional()
+    .describe('End time (ISO 8601 datetime or YYYY-MM-DD for all-day)'),
   description: z.string().optional().describe('Event description'),
   location: z.string().optional().describe('Event location'),
-  attendees: z.array(z.string().email()).optional().describe('List of attendee email addresses'),
+  attendees: z
+    .array(z.string().email())
+    .optional()
+    .describe('List of attendee email addresses'),
 
   // Shared options
   calendarId: z.string().optional().describe('Calendar ID (defaults to "primary")'),
-  addGoogleMeet: z.boolean().optional().default(false).describe('Auto-create Google Meet link'),
-  recurrence: z.array(z.string()).optional().describe('RRULE array for recurring events'),
+  addGoogleMeet: z
+    .boolean()
+    .optional()
+    .default(false)
+    .describe('Auto-create Google Meet link'),
+  recurrence: z
+    .array(z.string())
+    .optional()
+    .describe('RRULE array for recurring events'),
   reminders: RemindersSchema.optional().describe('Reminder settings'),
   visibility: z.enum(['default', 'public', 'private', 'confidential']).optional(),
   colorId: z.string().optional().describe('Color ID (1-11)'),
@@ -91,7 +115,12 @@ export const createEventTool = defineTool({
     if (!token) {
       return {
         isError: true,
-        content: [{ type: 'text', text: 'Authentication required. Please authenticate with Google Calendar.' }],
+        content: [
+          {
+            type: 'text',
+            text: 'Authentication required. Please authenticate with Google Calendar.',
+          },
+        ],
       };
     }
 
@@ -115,14 +144,24 @@ export const createEventTool = defineTool({
         if (!args.summary) {
           return {
             isError: true,
-            content: [{ type: 'text', text: "Either 'text' (for natural language) or 'summary' (for structured) is required." }],
+            content: [
+              {
+                type: 'text',
+                text: "Either 'text' (for natural language) or 'summary' (for structured) is required.",
+              },
+            ],
           };
         }
 
         if (!args.start || !args.end) {
           return {
             isError: true,
-            content: [{ type: 'text', text: "'start' and 'end' are required for structured event creation." }],
+            content: [
+              {
+                type: 'text',
+                text: "'start' and 'end' are required for structured event creation.",
+              },
+            ],
           };
         }
 
@@ -133,8 +172,12 @@ export const createEventTool = defineTool({
           calendarId: args.calendarId,
           summary: args.summary,
           description: args.description,
-          start: isAllDay ? { date: args.start } : { dateTime: args.start, timeZone: args.timeZone },
-          end: isAllDay ? { date: args.end } : { dateTime: args.end, timeZone: args.timeZone },
+          start: isAllDay
+            ? { date: args.start }
+            : { dateTime: args.start, timeZone: args.timeZone },
+          end: isAllDay
+            ? { date: args.end }
+            : { dateTime: args.end, timeZone: args.timeZone },
           location: args.location,
           attendees: args.attendees,
           addGoogleMeet: args.addGoogleMeet,
@@ -149,13 +192,22 @@ export const createEventTool = defineTool({
       const text = formatCreatedEvent(result);
 
       return {
-        content: [{ type: 'text', text: text + "\n\nNext: Share htmlLink with user. Use 'search_events' to verify." }],
+        content: [
+          {
+            type: 'text',
+            text:
+              text +
+              "\n\nNext: Share htmlLink with user. Use 'search_events' to verify.",
+          },
+        ],
         structuredContent: result,
       };
     } catch (error) {
       return {
         isError: true,
-        content: [{ type: 'text', text: `Failed to create event: ${(error as Error).message}` }],
+        content: [
+          { type: 'text', text: `Failed to create event: ${(error as Error).message}` },
+        ],
       };
     }
   },

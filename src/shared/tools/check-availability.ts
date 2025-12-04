@@ -40,7 +40,12 @@ export const checkAvailabilityTool = defineTool({
     if (!token) {
       return {
         isError: true,
-        content: [{ type: 'text', text: 'Authentication required. Please authenticate with Google Calendar.' }],
+        content: [
+          {
+            type: 'text',
+            text: 'Authentication required. Please authenticate with Google Calendar.',
+          },
+        ],
       };
     }
 
@@ -100,11 +105,14 @@ export const checkAvailabilityTool = defineTool({
     } catch (error) {
       return {
         isError: true,
-        content: [{ type: 'text', text: `Failed to check availability: ${(error as Error).message}` }],
+        content: [
+          {
+            type: 'text',
+            text: `Failed to check availability: ${(error as Error).message}`,
+          },
+        ],
       };
     }
   },
 });
-
-
 

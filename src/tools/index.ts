@@ -56,14 +56,21 @@ export function registerTools(server: McpServer): void {
 /**
  * Create a wrapped handler for shared tools.
  * Adapts the shared ToolContext to the SDK's RequestHandlerExtra.
- * 
+ *
  * SDK provides `extra.requestId` which we use to look up auth context from registry.
  */
 function createWrappedHandler(
   _server: McpServer,
   handler: (args: Record<string, unknown>, context: ToolContext) => Promise<unknown>,
 ) {
-  return async (args: Record<string, unknown>, extra?: { requestId?: string | number; _meta?: { progressToken?: string | number }; signal?: AbortSignal }) => {
+  return async (
+    args: Record<string, unknown>,
+    extra?: {
+      requestId?: string | number;
+      _meta?: { progressToken?: string | number };
+      signal?: AbortSignal;
+    },
+  ) => {
     // SDK provides requestId at top level of extra
     const requestId = extra?.requestId;
 
@@ -81,12 +88,14 @@ function createWrappedHandler(
       // Auth from context registry
       authStrategy: existingContext?.authStrategy,
       providerToken: existingContext?.providerToken,
-      provider: existingContext?.provider ? {
-        accessToken: existingContext.provider.access_token,
-        refreshToken: existingContext.provider.refresh_token,
-        expiresAt: existingContext.provider.expires_at,
-        scopes: existingContext.provider.scopes,
-      } : undefined,
+      provider: existingContext?.provider
+        ? {
+            accessToken: existingContext.provider.access_token,
+            refreshToken: existingContext.provider.refresh_token,
+            expiresAt: existingContext.provider.expires_at,
+            scopes: existingContext.provider.scopes,
+          }
+        : undefined,
       resolvedHeaders: existingContext?.resolvedHeaders,
       authHeaders: existingContext?.authHeaders as Record<string, string> | undefined,
     };

@@ -23,14 +23,14 @@ export interface RegisteredTool {
   handler: (args: Record<string, unknown>, context: ToolContext) => Promise<ToolResult>;
 }
 
-// Import all tools
-import { listCalendarsTool } from './list-calendars.js';
-import { searchEventsTool } from './search-events.js';
 import { checkAvailabilityTool } from './check-availability.js';
 import { createEventTool } from './create-event.js';
-import { updateEventTool } from './update-event.js';
 import { deleteEventTool } from './delete-event.js';
+// Import all tools
+import { listCalendarsTool } from './list-calendars.js';
 import { respondToEventTool } from './respond-to-event.js';
+import { searchEventsTool } from './search-events.js';
+import { updateEventTool } from './update-event.js';
 
 /**
  * All shared tools available in both runtimes.
@@ -94,7 +94,10 @@ export async function executeSharedTool(
     const parseResult = tool.inputSchema.safeParse(args);
     if (!parseResult.success) {
       const errors = parseResult.error.errors
-        .map((e: { path: (string | number)[]; message: string }) => `${e.path.join('.')}: ${e.message}`)
+        .map(
+          (e: { path: (string | number)[]; message: string }) =>
+            `${e.path.join('.')}: ${e.message}`,
+        )
         .join(', ');
       return {
         content: [{ type: 'text', text: `Invalid input: ${errors}` }],
@@ -102,7 +105,10 @@ export async function executeSharedTool(
       };
     }
 
-    const result = await tool.handler(parseResult.data as Record<string, unknown>, context);
+    const result = await tool.handler(
+      parseResult.data as Record<string, unknown>,
+      context,
+    );
 
     // Validate outputSchema compliance (per MCP spec)
     // When outputSchema is defined, structuredContent is required unless isError is true

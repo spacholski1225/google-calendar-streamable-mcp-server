@@ -4,7 +4,10 @@
 
 import { z } from 'zod';
 import { toolsMetadata } from '../../config/metadata.js';
-import { GoogleCalendarClient, type CalendarEvent } from '../../services/google-calendar.js';
+import {
+  type CalendarEvent,
+  GoogleCalendarClient,
+} from '../../services/google-calendar.js';
 import { defineTool, type ToolResult } from './types.js';
 
 const ReminderOverrideSchema = z.object({
@@ -28,7 +31,10 @@ const InputSchema = z.object({
   end: z.string().optional().describe('New end time (ISO 8601)'),
   description: z.string().optional().describe('New description'),
   location: z.string().optional().describe('New location'),
-  attendees: z.array(z.string().email()).optional().describe('New attendee list (replaces existing)'),
+  attendees: z
+    .array(z.string().email())
+    .optional()
+    .describe('New attendee list (replaces existing)'),
   addGoogleMeet: z.boolean().optional().describe('Add Google Meet link'),
   recurrence: z.array(z.string()).optional().describe('New RRULE array'),
   reminders: RemindersSchema.optional().describe('New reminder settings'),
@@ -88,7 +94,12 @@ export const updateEventTool = defineTool({
     if (!token) {
       return {
         isError: true,
-        content: [{ type: 'text', text: 'Authentication required. Please authenticate with Google Calendar.' }],
+        content: [
+          {
+            type: 'text',
+            text: 'Authentication required. Please authenticate with Google Calendar.',
+          },
+        ],
       };
     }
 
@@ -126,8 +137,8 @@ export const updateEventTool = defineTool({
 
       if (hasFieldsToUpdate) {
         // Build start/end objects if provided
-        let startObj = undefined;
-        let endObj = undefined;
+        let startObj;
+        let endObj;
 
         if (args.start) {
           startObj = isAllDayDate(args.start)
@@ -136,7 +147,9 @@ export const updateEventTool = defineTool({
         }
 
         if (args.end) {
-          endObj = isAllDayDate(args.end) ? { date: args.end } : { dateTime: args.end, timeZone: args.timeZone };
+          endObj = isAllDayDate(args.end)
+            ? { date: args.end }
+            : { dateTime: args.end, timeZone: args.timeZone };
         }
 
         result = await client.updateEvent({
@@ -171,17 +184,22 @@ export const updateEventTool = defineTool({
       const text = formatUpdatedEvent(result!, wasMoved);
 
       return {
-        content: [{ type: 'text', text: text + "\n\nNext: Use 'search_events' to verify changes." }],
+        content: [
+          {
+            type: 'text',
+            text: text + "\n\nNext: Use 'search_events' to verify changes.",
+          },
+        ],
         structuredContent: result!,
       };
     } catch (error) {
       return {
         isError: true,
-        content: [{ type: 'text', text: `Failed to update event: ${(error as Error).message}` }],
+        content: [
+          { type: 'text', text: `Failed to update event: ${(error as Error).message}` },
+        ],
       };
     }
   },
 });
-
-
 

@@ -5,9 +5,9 @@ import { createHash, randomBytes } from 'node:crypto';
 import type { ProviderTokens, TokenStore } from '../storage/interface.js';
 import {
   base64Encode,
+  base64UrlDecodeJson,
   base64UrlEncode,
   base64UrlEncodeJson,
-  base64UrlDecodeJson,
 } from '../utils/base64.js';
 import { sharedLogger as logger } from '../utils/logger.js';
 import type {
@@ -85,7 +85,9 @@ export async function handleAuthorize(
     throw new Error('invalid_request: redirect_uri is required');
   }
   if (!input.codeChallenge || input.codeChallengeMethod !== 'S256') {
-    throw new Error('invalid_request: PKCE code_challenge with S256 method is required');
+    throw new Error(
+      'invalid_request: PKCE code_challenge with S256 method is required',
+    );
   }
 
   const txnId = generateOpaqueToken(16);
@@ -397,7 +399,9 @@ async function refreshProviderToken(
     access_token: accessToken,
     refresh_token: data.refresh_token ?? providerRefreshToken,
     expires_at: Date.now() + Number(data.expires_in ?? 3600) * 1000,
-    scopes: String(data.scope || '').split(/\s+/).filter(Boolean),
+    scopes: String(data.scope || '')
+      .split(/\s+/)
+      .filter(Boolean),
   };
 }
 

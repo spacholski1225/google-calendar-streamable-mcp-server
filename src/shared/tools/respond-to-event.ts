@@ -4,7 +4,10 @@
 
 import { z } from 'zod';
 import { toolsMetadata } from '../../config/metadata.js';
-import { GoogleCalendarClient, type CalendarEvent } from '../../services/google-calendar.js';
+import {
+  type CalendarEvent,
+  GoogleCalendarClient,
+} from '../../services/google-calendar.js';
 import { defineTool, type ToolResult } from './types.js';
 
 const InputSchema = z.object({
@@ -12,7 +15,9 @@ const InputSchema = z.object({
   calendarId: z.string().optional().describe('Calendar ID (defaults to "primary")'),
   response: z
     .enum(['accepted', 'declined', 'tentative'])
-    .describe('Your response: "accepted" (yes), "declined" (no), or "tentative" (maybe)'),
+    .describe(
+      'Your response: "accepted" (yes), "declined" (no), or "tentative" (maybe)',
+    ),
   sendUpdates: z.enum(['all', 'externalOnly', 'none']).optional().default('all'),
 });
 
@@ -64,7 +69,12 @@ export const respondToEventTool = defineTool({
     if (!token) {
       return {
         isError: true,
-        content: [{ type: 'text', text: 'Authentication required. Please authenticate with Google Calendar.' }],
+        content: [
+          {
+            type: 'text',
+            text: 'Authentication required. Please authenticate with Google Calendar.',
+          },
+        ],
       };
     }
 
@@ -93,9 +103,13 @@ export const respondToEventTool = defineTool({
     } catch (error) {
       return {
         isError: true,
-        content: [{ type: 'text', text: `Failed to respond to event: ${(error as Error).message}` }],
+        content: [
+          {
+            type: 'text',
+            text: `Failed to respond to event: ${(error as Error).message}`,
+          },
+        ],
       };
     }
   },
 });
-

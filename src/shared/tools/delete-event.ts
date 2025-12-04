@@ -33,7 +33,12 @@ export const deleteEventTool = defineTool({
     if (!token) {
       return {
         isError: true,
-        content: [{ type: 'text', text: 'Authentication required. Please authenticate with Google Calendar.' }],
+        content: [
+          {
+            type: 'text',
+            text: 'Authentication required. Please authenticate with Google Calendar.',
+          },
+        ],
       };
     }
 
@@ -66,11 +71,11 @@ export const deleteEventTool = defineTool({
     } catch (error) {
       return {
         isError: true,
-        content: [{ type: 'text', text: `Failed to delete event: ${(error as Error).message}` }],
+        content: [
+          { type: 'text', text: `Failed to delete event: ${(error as Error).message}` },
+        ],
       };
     }
   },
 });
-
-
 

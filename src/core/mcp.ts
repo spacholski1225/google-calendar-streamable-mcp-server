@@ -1,8 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { SetLevelRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { config } from '../config/env.js';
-import { registerPrompts } from '../prompts/index.js';
-import { registerResources } from '../resources/index.js';
 import { registerTools } from '../tools/index.js';
 import { logger } from '../utils/logger.js';
 import { buildCapabilities } from './capabilities.js';
@@ -13,15 +11,6 @@ export interface ServerOptions {
   instructions?: string;
   /**
    * Called when initialization is complete (after client sends notifications/initialized).
-   * Per review finding #3: This fires AFTER transport.onsessioninitialized.
-   * 
-   * Guaranteed ordering:
-   * 1. transport.onsessioninitialized(sid) - session ID assigned
-   * 2. server.oninitialized() - client confirmed ready
-   * 
-   * At this point, you can safely:
-   * - Access client capabilities via server.server.getClientCapabilities()
-   * - Send server→client requests (sampling, elicitation, roots)
    */
   oninitialized?: () => void;
 }
@@ -41,7 +30,6 @@ export function buildServer(options: ServerOptions): McpServer {
   logger.setServer(server);
 
   // Register oninitialized callback
-  // Per review finding #3: This fires after onsessioninitialized
   const lowLevel = (server as any).server;
   if (lowLevel && oninitialized) {
     lowLevel.oninitialized = () => {
@@ -53,20 +41,15 @@ export function buildServer(options: ServerOptions): McpServer {
     };
   }
 
-  // Register handlers
+  // Register tools (no prompts/resources for Google Calendar MCP)
   registerTools(server);
-  registerPrompts(server);
-  registerResources(server);
 
   // Register logging/setLevel handler (required when logging capability is advertised)
-  server.server.setRequestHandler(
-    SetLevelRequestSchema,
-    async (request) => {
-      const level = request.params.level;
-      logger.info('mcp', { message: 'Log level changed', level });
-      return {};
-    },
-  );
+  server.server.setRequestHandler(SetLevelRequestSchema, async (request) => {
+    const level = request.params.level;
+    logger.info('mcp', { message: 'Log level changed', level });
+    return {};
+  });
 
   return server;
 }

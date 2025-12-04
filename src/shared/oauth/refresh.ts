@@ -104,7 +104,9 @@ export async function refreshProviderToken(
         access_token: accessToken,
         refresh_token: data.refresh_token ?? refreshToken,
         expires_at: Date.now() + Number(data.expires_in ?? 3600) * 1000,
-        scopes: String(data.scope || '').split(/\s+/).filter(Boolean),
+        scopes: String(data.scope || '')
+          .split(/\s+/)
+          .filter(Boolean),
       },
     };
   } catch (error) {
@@ -183,7 +185,10 @@ export async function ensureFreshToken(
     return { accessToken: record.provider.access_token, wasRefreshed: false };
   }
 
-  const result = await refreshProviderToken(record.provider.refresh_token, providerConfig);
+  const result = await refreshProviderToken(
+    record.provider.refresh_token,
+    providerConfig,
+  );
 
   if (!result.success || !result.tokens) {
     logger.error('oauth_refresh', {

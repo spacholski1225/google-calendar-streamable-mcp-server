@@ -4,8 +4,8 @@
  */
 
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import { buildCapabilities } from '../../core/capabilities.js';
 import { serverMetadata } from '../../config/metadata.js';
+import { buildCapabilities } from '../../core/capabilities.js';
 import { executeSharedTool, sharedTools } from '../tools/registry.js';
 import type { ToolContext } from '../tools/types.js';
 import { sharedLogger as logger } from '../utils/logger.js';
@@ -73,7 +73,9 @@ async function handleInitialize(
   params: Record<string, unknown> | undefined,
   ctx: McpDispatchContext,
 ): Promise<JsonRpcResult> {
-  const clientInfo = params?.clientInfo as { name: string; version: string } | undefined;
+  const clientInfo = params?.clientInfo as
+    | { name: string; version: string }
+    | undefined;
   const requestedVersion = String(params?.protocolVersion || LATEST_PROTOCOL_VERSION);
 
   // Negotiate protocol version
@@ -117,7 +119,9 @@ async function handleToolsList(): Promise<JsonRpcResult> {
       // The outputSchema is a ZodRawShape (just properties), wrap it in an object schema
       const properties: Record<string, unknown> = {};
       for (const [key, zodType] of Object.entries(tool.outputSchema)) {
-        properties[key] = zodToJsonSchema(zodType as Parameters<typeof zodToJsonSchema>[0]);
+        properties[key] = zodToJsonSchema(
+          zodType as Parameters<typeof zodToJsonSchema>[0],
+        );
       }
       outputSchema = {
         type: 'object',
@@ -230,14 +234,31 @@ async function handlePing(): Promise<JsonRpcResult> {
 }
 
 /** Current log level (can be changed via logging/setLevel) */
-let currentLogLevel: 'debug' | 'info' | 'notice' | 'warning' | 'error' | 'critical' | 'alert' | 'emergency' = 'info';
+let currentLogLevel:
+  | 'debug'
+  | 'info'
+  | 'notice'
+  | 'warning'
+  | 'error'
+  | 'critical'
+  | 'alert'
+  | 'emergency' = 'info';
 
 async function handleLoggingSetLevel(
   params: Record<string, unknown> | undefined,
 ): Promise<JsonRpcResult> {
   const level = params?.level as string | undefined;
 
-  const validLevels = ['debug', 'info', 'notice', 'warning', 'error', 'critical', 'alert', 'emergency'];
+  const validLevels = [
+    'debug',
+    'info',
+    'notice',
+    'warning',
+    'error',
+    'critical',
+    'alert',
+    'emergency',
+  ];
 
   if (!level || !validLevels.includes(level)) {
     return {
@@ -389,4 +410,3 @@ export function handleMcpNotification(
   });
   return false;
 }
-
