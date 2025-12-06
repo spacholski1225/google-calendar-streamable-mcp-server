@@ -141,6 +141,26 @@ function getEventStartTime(event: CalendarEvent): number {
   return new Date(dateStr).getTime();
 }
 
+/**
+ * Client-side substring search to complement Google's exact word matching.
+ * Google's API `q` parameter only matches exact words, so "barber" won't find "barbershop".
+ * This filter catches those cases with case-insensitive substring matching.
+ */
+function matchesQuerySubstring(event: CalendarEvent, query: string): boolean {
+  const lowerQuery = query.toLowerCase();
+  const searchableFields = [
+    event.summary,
+    event.description,
+    event.location,
+    ...(event.attendees?.map((a) => a.email) ?? []),
+    ...(event.attendees?.map((a) => a.displayName) ?? []),
+  ];
+
+  return searchableFields.some(
+    (field) => field && field.toLowerCase().includes(lowerQuery),
+  );
+}
+
 export const searchEventsTool = defineTool({
   name: toolsMetadata.search_events.name,
   title: toolsMetadata.search_events.title,
@@ -211,6 +231,9 @@ export const searchEventsTool = defineTool({
       }
 
       // Search all calendars in parallel
+      // Note: We don't pass `q` to Google API because it only does exact word matching.
+      // Instead, we fetch events and filter locally with substring matching.
+      // This ensures "barber" will match "barbershop".
       const searchPromises = calendarsToSearch.map(async (calendar) => {
         try {
           const result = await client.listEvents({
@@ -219,11 +242,11 @@ export const searchEventsTool = defineTool({
             timeMax: args.timeMax,
             maxResults:
               args.calendarId === 'all'
-                ? Math.min(args.maxResults ?? 50, 100) // Cap per-calendar when searching all
-                : args.maxResults,
+                ? Math.min((args.maxResults ?? 50) * 2, 200) // Fetch more to filter locally
+                : (args.maxResults ?? 50) * 2,
             singleEvents: args.singleEvents,
             orderBy: args.singleEvents ? args.orderBy || 'startTime' : args.orderBy,
-            q: args.query,
+            // Don't use Google's q parameter - do local substring filtering instead
             eventTypes: args.eventTypes,
             pageToken: args.pageToken,
           });
@@ -257,6 +280,12 @@ export const searchEventsTool = defineTool({
 
       // Merge all events and sort by start time
       let allEvents: EventWithCalendar[] = results.flatMap((r) => r.events);
+
+      // Apply local substring filtering if query is provided
+      // This catches partial matches that Google's exact word matching misses
+      if (args.query) {
+        allEvents = allEvents.filter((event) => matchesQuerySubstring(event, args.query!));
+      }
 
       // Sort by start time if using startTime ordering
       if (
