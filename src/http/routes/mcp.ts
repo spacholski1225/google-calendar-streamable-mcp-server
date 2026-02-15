@@ -13,27 +13,31 @@ import { createCancellationToken } from '../../utils/cancellation.js';
 import { logger } from '../../utils/logger.js';
 
 export function buildMcpRoutes(params: {
-  server: McpServer;
+  createServer: () => McpServer;
   transports: Map<string, StreamableHTTPServerTransport>;
+  servers: Map<string, McpServer>;
 }) {
-  const { server, transports } = params;
+  const { createServer, transports, servers } = params;
   const app = new Hono<{ Bindings: HttpBindings }>();
-
-  // Track which transports have been connected to avoid duplicate connect() calls
-  const connectedTransports = new WeakSet<StreamableHTTPServerTransport>();
 
   const MCP_SESSION_HEADER = 'Mcp-Session-Id';
 
   /**
-   * Connect transport to server only if not already connected.
-   * McpServer.connect() should be called once per transport lifecycle.
+   * Get or create server and transport for a session.
+   * Each session gets its own McpServer instance to avoid "Already connected" errors.
    */
   async function ensureConnected(
+    sessionId: string,
     transport: StreamableHTTPServerTransport,
   ): Promise<void> {
-    if (!connectedTransports.has(transport)) {
+    if (!servers.has(sessionId)) {
+      const server = createServer();
       await server.connect(transport);
-      connectedTransports.add(transport);
+      servers.set(sessionId, server);
+      void logger.debug('mcp', {
+        message: 'Created new server instance for session',
+        sessionId,
+      });
     }
   }
 
@@ -139,7 +143,8 @@ export function buildMcpRoutes(params: {
         });
       }
 
-      await ensureConnected(transport);
+      const sessionId = plannedSid || sessionIdHeader || 'default';
+      await ensureConnected(sessionId, transport);
 
       // Run transport handling within AsyncLocalStorage context
       // This makes auth context available to tool handlers via getCurrentAuthContext()
@@ -186,7 +191,7 @@ export function buildMcpRoutes(params: {
       if (!transport) {
         return c.text('Invalid session', 404);
       }
-      await ensureConnected(transport);
+      await ensureConnected(sessionIdHeader, transport);
       await transport.handleRequest(req, res);
       return toFetchResponse(res);
     } catch (error) {
@@ -223,9 +228,10 @@ export function buildMcpRoutes(params: {
       if (!transport) {
         return c.text('Invalid session', 404);
       }
-      await ensureConnected(transport);
+      await ensureConnected(sessionIdHeader, transport);
       await transport.handleRequest(req, res);
       transports.delete(sessionIdHeader);
+      servers.delete(sessionIdHeader);
       transport.close();
       return toFetchResponse(res);
     } catch (error) {

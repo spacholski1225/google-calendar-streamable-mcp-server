@@ -20,14 +20,15 @@ export function buildHttpApp(): Hono<{ Bindings: HttpBindings }> {
   // Parse unified config
   const unifiedConfig = parseConfig(process.env as Record<string, unknown>);
 
-  // Build MCP server
-  const server = buildServer({
+  // Server factory - create new server instance per session
+  const createServer = () => buildServer({
     name: config.MCP_TITLE || serverMetadata.title,
     version: config.MCP_VERSION,
     instructions: config.MCP_INSTRUCTIONS || serverMetadata.instructions,
   });
 
   const transports = new Map();
+  const servers = new Map();
 
   // Global middleware
   app.use('*', corsMiddleware());
@@ -39,7 +40,7 @@ export function buildHttpApp(): Hono<{ Bindings: HttpBindings }> {
 
   // MCP endpoint with security
   app.use('/mcp', createMcpSecurityMiddleware(unifiedConfig));
-  app.route('/mcp', buildMcpRoutes({ server, transports }));
+  app.route('/mcp', buildMcpRoutes({ createServer, transports, servers }));
 
   return app;
 }
